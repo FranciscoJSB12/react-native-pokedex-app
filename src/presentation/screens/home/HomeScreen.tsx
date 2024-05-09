@@ -1,34 +1,35 @@
 import { StyleSheet, View, FlatList } from 'react-native';
-import { Text } from 'react-native-paper';
+import { FAB, Text, useTheme } from 'react-native-paper';
 import { getPokemons } from '../../../actions/pokemons';
+
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { PokeballBg } from '../../components/ui/PokeballBg';
 import { globalTheme } from '../../../config/theme/global-theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PokemonCard } from '../../components/pokemons/PokemonCard';
+import { StackScreenProps } from '@react-navigation/stack';
+import { RootStackParams } from '../../navigator/StackNavigator';
 
-export const HomeScreen = () => {
+interface Props extends StackScreenProps<RootStackParams, 'HomeScreen'> {}
+
+export const HomeScreen = ({ navigation }: Props) => {
   const { top } = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const theme = useTheme();
+  //El theme se puede usar del context o del useTheme de react native paper
 
   //* Esta es la forma tradicional de una petición http
   // const {isLoading, data: pokemons = [] } = useQuery({
   //   queryKey: ['pokemons'],
-  //   el queryKey es un identificador para el manejo de la información en caché, de esta forma si alguien hace una petición a pokemons, y en otro lugar se hace la misma petición con esa clave entonces tanstack va usar lo que tiene en caché y así se ahorra la petición
   //   queryFn: () => getPokemons(0),
-  //   la queryFn es simplemente la función que usaremos para obtener la información
-  //
   //   staleTime: 1000 * 60 * 60, // 60 minutes
-  //   con el staleTime le decimos que es información que trajo es válida o está fresca por un intervalo de tiempo, en este caso 60 minutos
   // });
 
   const { isLoading, data, fetchNextPage } = useInfiniteQuery({
     queryKey: ['pokemons', 'infinite'],
     initialPageParam: 0,
-    //initialPageParam indica que la página inicial va a ser cero
     staleTime: 1000 * 60 * 60, // 60 minutes
     queryFn: async params => {
-      //pageParam te dice cual es la página en la que estás solicitando
       const pokemons = await getPokemons(params.pageParam);
       pokemons.forEach(pokemon => {
         queryClient.setQueryData(['pokemon', pokemon.id], pokemon);
@@ -36,7 +37,6 @@ export const HomeScreen = () => {
 
       return pokemons;
     },
-    //El argumento page en la función getNextpageParam indica las páginas que tienes hasta el momento, esta función puede generar un error si queryFn está por debajo
     getNextPageParam: (lastPage, pages) => pages.length,
   });
 
@@ -54,6 +54,15 @@ export const HomeScreen = () => {
         onEndReachedThreshold={0.6}
         onEndReached={() => fetchNextPage()}
         showsVerticalScrollIndicator={false}
+      />
+
+      <FAB
+        label='Buscar'
+        style={[globalTheme.fab, { backgroundColor: theme.colors.primary }]}
+        mode='elevated'
+        color={theme.dark ? 'black' : 'white'}
+        //Aplicamos aquí el push para que el usuario pueda regresar a la pantall anterior
+        onPress={() => navigation.push('SearchScreen')}
       />
     </View>
   );
